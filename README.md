@@ -1,8 +1,22 @@
 # pytitiler
 
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![titiler-pgstac 1.0–2.x](https://img.shields.io/badge/titiler--pgstac-1.0–2.x-green.svg)](https://github.com/stac-utils/titiler-pgstac)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![httpx](https://img.shields.io/badge/http%20client-httpx-orange.svg)](https://www.python-httpx.org/)
+[![Pydantic v2](https://img.shields.io/badge/pydantic-v2-blueviolet.svg)](https://docs.pydantic.dev/)
+
 Python client for [titiler-pgstac](https://github.com/stac-utils/titiler-pgstac) — async-first with sync wrapper.
 
 Covers all 78 endpoints across STAC searches, collections, items, algorithms, colormaps, and tiling schemes.
+
+## Compatibility
+
+| pytitiler | titiler-pgstac | OGC Tiles API |
+|-----------|---------------|---------------|
+| 0.1.x | 1.0 – 2.x | Yes |
+
+Built and tested against the titiler-pgstac v2.1.0 OpenAPI spec. Should work with any 1.x or 2.x release that follows the same endpoint structure. Pydantic models use `extra="allow"` on response types, so additional fields from newer versions are preserved without breaking.
 
 ## Installation
 
