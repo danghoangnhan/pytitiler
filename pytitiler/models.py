@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
-
 
 # ──────────────────────────────────────────────
 # Enums
 # ──────────────────────────────────────────────
 
-class ImageType(str, Enum):
+
+class ImageType(StrEnum):
     png = "png"
     npy = "npy"
     tif = "tif"
@@ -24,7 +24,7 @@ class ImageType(str, Enum):
     pngraw = "pngraw"
 
 
-class ResamplingMethod(str, Enum):
+class ResamplingMethod(StrEnum):
     nearest = "nearest"
     bilinear = "bilinear"
     cubic = "cubic"
@@ -36,7 +36,7 @@ class ResamplingMethod(str, Enum):
     rms = "rms"
 
 
-class WarpResampling(str, Enum):
+class WarpResampling(StrEnum):
     """Superset of ResamplingMethod — used for reprojection."""
 
     nearest = "nearest"
@@ -55,17 +55,17 @@ class WarpResampling(str, Enum):
     rms = "rms"
 
 
-class SortDirection(str, Enum):
+class SortDirection(StrEnum):
     asc = "asc"
     desc = "desc"
 
 
-class MetadataType(str, Enum):
+class MetadataType(StrEnum):
     mosaic = "mosaic"
     search = "search"
 
 
-class NodataType(str, Enum):
+class NodataType(StrEnum):
     alpha = "Alpha"
     mask = "Mask"
     internal = "Internal"
@@ -76,6 +76,7 @@ class NodataType(str, Enum):
 # ──────────────────────────────────────────────
 # Shared parameter models
 # ──────────────────────────────────────────────
+
 
 class PgSTACParams(BaseModel):
     """PgSTAC query-control parameters."""
@@ -124,6 +125,7 @@ class BboxParams(TileParams):
 # Request models
 # ──────────────────────────────────────────────
 
+
 class SortExtension(BaseModel):
     field: str
     direction: SortDirection
@@ -167,6 +169,7 @@ class RegisterMosaicRequest(BaseModel):
 # ──────────────────────────────────────────────
 # Response models
 # ──────────────────────────────────────────────
+
 
 class Link(BaseModel):
     href: str

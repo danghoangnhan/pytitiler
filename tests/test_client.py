@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 import httpx
 import pytest
 
@@ -18,10 +17,10 @@ from pytitiler.models import (
     TileParams,
 )
 
-
 # ──────────────────────────────────────────────
 # Helpers
 # ──────────────────────────────────────────────
+
 
 def _json_response(data: dict, status_code: int = 200) -> httpx.Response:
     return httpx.Response(
@@ -45,13 +44,22 @@ def _make_client(handler) -> TiTilerPgSTAC:
     client = TiTilerPgSTAC("http://test", timeout=5.0)
     mock_http = httpx.AsyncClient(base_url="http://test", transport=transport)
     client._async_client._http = mock_http
-    for attr in ("searches", "collections", "items", "algorithms", "colormaps", "tiling_schemes"):
+    sub_apis = (
+        "searches",
+        "collections",
+        "items",
+        "algorithms",
+        "colormaps",
+        "tiling_schemes",
+    )
+    for attr in sub_apis:
         getattr(client._async_client, attr)._http = mock_http
     return client
 
 
 def _route_handler(routes: dict):
     """Build a handler from a dict of 'METHOD /path' -> Response."""
+
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.raw_path.decode().split("?")[0]
         key = f"{request.method} {path}"
@@ -63,6 +71,7 @@ def _route_handler(routes: dict):
             if request.method == method and path.startswith(route_path):
                 return response
         return httpx.Response(404, json={"detail": f"Not found: {key}"})
+
     return handler
 
 
@@ -70,33 +79,46 @@ def _route_handler(routes: dict):
 # Search API tests
 # ──────────────────────────────────────────────
 
+
 @pytest.mark.unit
 class TestSearchAPI:
     def test_register(self):
-        client = _make_client(_route_handler({
-            "POST /searches/register": _json_response({"id": "abc123"}),
-        }))
+        client = _make_client(
+            _route_handler(
+                {
+                    "POST /searches/register": _json_response({"id": "abc123"}),
+                }
+            )
+        )
         with client:
             result = client.searches.register(collections=["sentinel-2"])
             assert isinstance(result, RegisterResponse)
             assert result.id == "abc123"
 
     def test_list(self):
-        client = _make_client(_route_handler({
-            "GET /searches/list": _json_response({
-                "searches": [{
-                    "search": {
-                        "hash": "h1",
-                        "search": {},
-                        "lastused": "2026-01-01T00:00:00Z",
-                        "usecount": 5,
-                        "metadata": {"type": "mosaic"},
-                    },
-                    "links": [],
-                }],
-                "context": {"returned": 1},
-            }),
-        }))
+        client = _make_client(
+            _route_handler(
+                {
+                    "GET /searches/list": _json_response(
+                        {
+                            "searches": [
+                                {
+                                    "search": {
+                                        "hash": "h1",
+                                        "search": {},
+                                        "lastused": "2026-01-01T00:00:00Z",
+                                        "usecount": 5,
+                                        "metadata": {"type": "mosaic"},
+                                    },
+                                    "links": [],
+                                }
+                            ],
+                            "context": {"returned": 1},
+                        }
+                    ),
+                }
+            )
+        )
         with client:
             result = client.searches.list(limit=10)
             assert isinstance(result, SearchList)
@@ -105,9 +127,15 @@ class TestSearchAPI:
 
     def test_tile(self):
         tile_bytes = b"\x00\x01\x02\x03"
-        client = _make_client(_route_handler({
-            "GET /searches/abc/tiles/WebMercatorQuad/10/512/384.tif": _bytes_response(tile_bytes),
-        }))
+        client = _make_client(
+            _route_handler(
+                {
+                    "GET /searches/abc/tiles/WebMercatorQuad/10/512/384.tif": _bytes_response(
+                        tile_bytes
+                    ),
+                }
+            )
+        )
         with client:
             result = client.searches.tile("abc", "WebMercatorQuad", 10, 512, 384)
             assert result == tile_bytes
@@ -119,9 +147,15 @@ class TestSearchAPI:
             "minzoom": 0,
             "maxzoom": 18,
         }
-        client = _make_client(_route_handler({
-            "GET /searches/abc/WebMercatorQuad/tilejson.json": _json_response(tj_data),
-        }))
+        client = _make_client(
+            _route_handler(
+                {
+                    "GET /searches/abc/WebMercatorQuad/tilejson.json": _json_response(
+                        tj_data
+                    ),
+                }
+            )
+        )
         with client:
             result = client.searches.tilejson("abc", "WebMercatorQuad")
             assert isinstance(result, TileJSON)
@@ -129,29 +163,47 @@ class TestSearchAPI:
             assert result.maxzoom == 18
 
     def test_point(self):
-        client = _make_client(_route_handler({
-            "GET /searches/abc/point/12.5,45.3": _json_response({
-                "coordinates": [12.5, 45.3],
-                "assets": [{"name": "visual", "values": [100, 200, 150], "band_names": ["b1", "b2", "b3"]}],
-            }),
-        }))
+        client = _make_client(
+            _route_handler(
+                {
+                    "GET /searches/abc/point/12.5,45.3": _json_response(
+                        {
+                            "coordinates": [12.5, 45.3],
+                            "assets": [
+                                {
+                                    "name": "visual",
+                                    "values": [100, 200, 150],
+                                    "band_names": ["b1", "b2", "b3"],
+                                },
+                            ],
+                        }
+                    ),
+                }
+            )
+        )
         with client:
             result = client.searches.point("abc", 12.5, 45.3)
             assert isinstance(result, MosaicPointResponse)
             assert len(result.assets) == 1
 
     def test_info(self):
-        client = _make_client(_route_handler({
-            "GET /searches/abc/info": _json_response({
-                "search": {
-                    "hash": "abc",
-                    "search": {},
-                    "lastused": "2026-01-01T00:00:00Z",
-                    "usecount": 1,
-                    "metadata": {"type": "mosaic"},
-                },
-            }),
-        }))
+        client = _make_client(
+            _route_handler(
+                {
+                    "GET /searches/abc/info": _json_response(
+                        {
+                            "search": {
+                                "hash": "abc",
+                                "search": {},
+                                "lastused": "2026-01-01T00:00:00Z",
+                                "usecount": 1,
+                                "metadata": {"type": "mosaic"},
+                            },
+                        }
+                    ),
+                }
+            )
+        )
         with client:
             result = client.searches.info("abc")
             assert isinstance(result, SearchInfo)
@@ -161,6 +213,7 @@ class TestSearchAPI:
 # ──────────────────────────────────────────────
 # Parameter merging tests
 # ──────────────────────────────────────────────
+
 
 @pytest.mark.unit
 class TestParamMerging:
@@ -174,7 +227,11 @@ class TestParamMerging:
         client = _make_client(handler)
         with client:
             client.searches.tile(
-                "abc", "WebMercatorQuad", 10, 512, 384,
+                "abc",
+                "WebMercatorQuad",
+                10,
+                512,
+                384,
                 tile_params=TileParams(assets=["visual"], resampling="bilinear"),
                 pgstac_params=PgSTACParams(items_limit=50),
             )
@@ -192,7 +249,11 @@ class TestParamMerging:
         client = _make_client(handler)
         with client:
             client.searches.tile(
-                "abc", "WebMercatorQuad", 10, 512, 384,
+                "abc",
+                "WebMercatorQuad",
+                10,
+                512,
+                384,
                 tile_params=TileParams(assets=["visual"]),
             )
 
@@ -204,20 +265,29 @@ class TestParamMerging:
 # Sync wrapper tests
 # ──────────────────────────────────────────────
 
+
 @pytest.mark.unit
 class TestSyncClient:
     def test_health(self):
-        client = _make_client(_route_handler({
-            "GET /healthz": httpx.Response(200, text="ok"),
-        }))
+        client = _make_client(
+            _route_handler(
+                {
+                    "GET /healthz": httpx.Response(200, text="ok"),
+                }
+            )
+        )
         with client:
             result = client.health()
             assert result == "ok"
 
     def test_search_register_sync(self):
-        client = _make_client(_route_handler({
-            "POST /searches/register": _json_response({"id": "sync123"}),
-        }))
+        client = _make_client(
+            _route_handler(
+                {
+                    "POST /searches/register": _json_response({"id": "sync123"}),
+                }
+            )
+        )
         with client:
             result = client.searches.register(collections=["test"])
             assert result.id == "sync123"
@@ -226,6 +296,7 @@ class TestSyncClient:
 # ──────────────────────────────────────────────
 # URL construction tests
 # ──────────────────────────────────────────────
+
 
 @pytest.mark.unit
 class TestURLConstruction:
@@ -240,7 +311,8 @@ class TestURLConstruction:
         with client:
             client.collections.tile("sentinel-2", "WebMercatorQuad", 10, 512, 384)
 
-        assert captured_path["path"] == "/collections/sentinel-2/tiles/WebMercatorQuad/10/512/384.tif"
+        expected = "/collections/sentinel-2/tiles/WebMercatorQuad/10/512/384.tif"
+        assert captured_path["path"] == expected
 
     def test_item_preview_url(self):
         captured_path = {}
@@ -252,11 +324,15 @@ class TestURLConstruction:
         client = _make_client(handler)
         with client:
             client.items.preview(
-                "sentinel-2", "S2A_123",
-                width=512, height=512, format=ImageType.png,
+                "sentinel-2",
+                "S2A_123",
+                width=512,
+                height=512,
+                format=ImageType.png,
             )
 
-        assert captured_path["path"] == "/collections/sentinel-2/items/S2A_123/preview/512x512.png"
+        expected = "/collections/sentinel-2/items/S2A_123/preview/512x512.png"
+        assert captured_path["path"] == expected
 
     def test_search_bbox_url(self):
         captured_path = {}
@@ -268,25 +344,31 @@ class TestURLConstruction:
         client = _make_client(handler)
         with client:
             client.searches.bbox_image(
-                "abc", (10.0, 45.0, 11.0, 46.0),
-                width=256, height=256, format=ImageType.png,
+                "abc",
+                (10.0, 45.0, 11.0, 46.0),
+                width=256,
+                height=256,
+                format=ImageType.png,
             )
 
-        assert captured_path["path"] == "/searches/abc/bbox/10.0,45.0,11.0,46.0/256x256.png"
+        expected = "/searches/abc/bbox/10.0,45.0,11.0,46.0/256x256.png"
+        assert captured_path["path"] == expected
 
     def test_item_info_url(self):
         captured_path = {}
 
         def handler(request: httpx.Request) -> httpx.Response:
             captured_path["path"] = request.url.raw_path.decode()
-            return _json_response({
-                "bounds": [0, 0, 1, 1],
-                "crs": "EPSG:4326",
-                "band_metadata": [["b1", {}]],
-                "band_descriptions": [["b1", "Band 1"]],
-                "dtype": "uint8",
-                "nodata_type": "None",
-            })
+            return _json_response(
+                {
+                    "bounds": [0, 0, 1, 1],
+                    "crs": "EPSG:4326",
+                    "band_metadata": [["b1", {}]],
+                    "band_descriptions": [["b1", "Band 1"]],
+                    "dtype": "uint8",
+                    "nodata_type": "None",
+                }
+            )
 
         client = _make_client(handler)
         with client:
@@ -299,7 +381,11 @@ class TestURLConstruction:
 
         def handler(request: httpx.Request) -> httpx.Response:
             captured_path["path"] = request.url.raw_path.decode()
-            return httpx.Response(200, text="<xml/>", headers={"content-type": "application/xml"})
+            return httpx.Response(
+                200,
+                text="<xml/>",
+                headers={"content-type": "application/xml"},
+            )
 
         client = _make_client(handler)
         with client:
@@ -313,19 +399,28 @@ class TestURLConstruction:
 # Error-path tests
 # ──────────────────────────────────────────────
 
+
 @pytest.mark.unit
 class TestErrorPaths:
     def test_http_404_raises_status_error(self):
-        client = _make_client(_route_handler({
-            "GET /searches/missing/info": httpx.Response(404, json={"detail": "Not found"}),
-        }))
+        client = _make_client(
+            _route_handler(
+                {
+                    "GET /searches/missing/info": httpx.Response(
+                        404, json={"detail": "Not found"}
+                    ),
+                }
+            )
+        )
         with client:
             with pytest.raises(httpx.HTTPStatusError) as exc_info:
                 client.searches.info("missing")
             assert exc_info.value.response.status_code == 404
 
     def test_http_500_raises_status_error(self):
-        client = _make_client(lambda req: httpx.Response(500, json={"detail": "Internal error"}))
+        client = _make_client(
+            lambda req: httpx.Response(500, json={"detail": "Internal error"}),
+        )
         with client:
             with pytest.raises(httpx.HTTPStatusError) as exc_info:
                 client.searches.register(collections=["fail"])
@@ -334,12 +429,14 @@ class TestErrorPaths:
     def test_merge_params_all_none_returns_empty_dict(self):
         """_merge_params with no models returns an empty dict, not None."""
         from pytitiler._base import BaseAPI
+
         result = BaseAPI._merge_params(None, None)
         assert result == {}
         assert isinstance(result, dict)
 
     def test_merge_params_no_args_returns_empty_dict(self):
         from pytitiler._base import BaseAPI
+
         result = BaseAPI._merge_params()
         assert result == {}
 

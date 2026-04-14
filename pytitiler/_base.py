@@ -77,8 +77,7 @@ class RasterEndpointsMixin(BaseAPI):
         tile_params: TileParams | None = None,
         pgstac_params: PgSTACParams | None = None,
     ) -> bytes:
-        fmt = format.value if isinstance(format, ImageType) else format
-        path = f"{prefix}/tiles/{tms}/{z}/{x}/{y}.{fmt}"
+        path = f"{prefix}/tiles/{tms}/{z}/{x}/{y}.{format}"
         params = self._merge_params(tile_params, pgstac_params)
         resp = await self._get(path, params=params, accept="image/*")
         return resp.content
@@ -139,12 +138,13 @@ class RasterEndpointsMixin(BaseAPI):
         bbox_params: BboxParams | None = None,
         pgstac_params: PgSTACParams | None = None,
     ) -> bytes:
-        fmt = format.value if isinstance(format, ImageType) else format
         minx, miny, maxx, maxy = bbox
         if width is not None and height is not None:
-            path = f"{prefix}/bbox/{minx},{miny},{maxx},{maxy}/{width}x{height}.{fmt}"
+            path = (
+                f"{prefix}/bbox/{minx},{miny},{maxx},{maxy}/{width}x{height}.{format}"
+            )
         else:
-            path = f"{prefix}/bbox/{minx},{miny},{maxx},{maxy}.{fmt}"
+            path = f"{prefix}/bbox/{minx},{miny},{maxx},{maxy}.{format}"
         params = self._merge_params(bbox_params, pgstac_params)
         resp = await self._get(path, params=params, accept="image/*")
         return resp.content
@@ -160,11 +160,10 @@ class RasterEndpointsMixin(BaseAPI):
         tile_params: TileParams | None = None,
         pgstac_params: PgSTACParams | None = None,
     ) -> bytes:
-        fmt = format.value if isinstance(format, ImageType) else format
         if width is not None and height is not None:
-            path = f"{prefix}/feature/{width}x{height}.{fmt}"
+            path = f"{prefix}/feature/{width}x{height}.{format}"
         else:
-            path = f"{prefix}/feature.{fmt}"
+            path = f"{prefix}/feature.{format}"
         params = self._merge_params(tile_params, pgstac_params)
         resp = await self._post(path, json=feature, params=params)
         return resp.content

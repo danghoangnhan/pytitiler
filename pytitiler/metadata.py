@@ -48,8 +48,7 @@ class AsyncTilingSchemeAPI(BaseAPI):
         resp = await self._get("/tileMatrixSets")
         data = resp.json()
         return [
-            TileMatrixSetRef.model_validate(t)
-            for t in data.get("tileMatrixSets", [])
+            TileMatrixSetRef.model_validate(t) for t in data.get("tileMatrixSets", [])
         ]
 
     async def get(self, tms_id: str) -> dict:
