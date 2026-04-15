@@ -15,6 +15,7 @@ from pytitiler.metadata import (
     AsyncColorMapAPI,
     AsyncTilingSchemeAPI,
 )
+from pytitiler.models import Conformance, Landing
 from pytitiler.searches import AsyncSearchAPI
 
 # ──────────────────────────────────────────────
@@ -59,17 +60,17 @@ class AsyncTiTilerPgSTAC:
         resp.raise_for_status()
         return resp.text
 
-    async def landing(self) -> dict:
+    async def landing(self) -> Landing:
         """GET / — OGC landing page."""
         resp = await self._http.get("/")
         resp.raise_for_status()
-        return resp.json()
+        return Landing.model_validate(resp.json())
 
-    async def conformance(self) -> dict:
+    async def conformance(self) -> Conformance:
         """GET /conformance — OGC conformance classes."""
         resp = await self._http.get("/conformance")
         resp.raise_for_status()
-        return resp.json()
+        return Conformance.model_validate(resp.json())
 
     async def aclose(self) -> None:
         await self._http.aclose()
@@ -165,10 +166,10 @@ class TiTilerPgSTAC:
     def health(self) -> str:
         return self._loop.run_until_complete(self._async_client.health())
 
-    def landing(self) -> dict:
+    def landing(self) -> Landing:
         return self._loop.run_until_complete(self._async_client.landing())
 
-    def conformance(self) -> dict:
+    def conformance(self) -> Conformance:
         return self._loop.run_until_complete(self._async_client.conformance())
 
     def close(self) -> None:

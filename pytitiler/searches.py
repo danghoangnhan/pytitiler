@@ -14,8 +14,11 @@ from pytitiler.models import (
     SearchInfo,
     SearchList,
     SortExtension,
+    StatisticsCollection,
     TileJSON,
     TileParams,
+    TileSet,
+    TileSetList,
 )
 
 
@@ -75,6 +78,11 @@ class AsyncSearchAPI(RasterEndpointsMixin):
         resp = await self._get("/searches/list", params=params or None)
         return SearchList.model_validate(resp.json())
 
+    async def get(self) -> SearchList:
+        """GET /searches/ — OGC-style search listing."""
+        resp = await self._get("/searches/")
+        return SearchList.model_validate(resp.json())
+
     # ── Delegated raster operations ───────────────
 
     async def tile(
@@ -85,7 +93,8 @@ class AsyncSearchAPI(RasterEndpointsMixin):
         x: int,
         y: int,
         *,
-        format: str | ImageType = ImageType.tif,
+        scale: int | None = None,
+        format: str | ImageType | None = ImageType.tif,
         tile_params: TileParams | None = None,
         pgstac_params: PgSTACParams | None = None,
     ) -> bytes:
@@ -95,6 +104,7 @@ class AsyncSearchAPI(RasterEndpointsMixin):
             z,
             x,
             y,
+            scale=scale,
             format=format,
             tile_params=tile_params,
             pgstac_params=pgstac_params,
@@ -174,7 +184,7 @@ class AsyncSearchAPI(RasterEndpointsMixin):
         *,
         width: int | None = None,
         height: int | None = None,
-        format: str | ImageType = ImageType.tif,
+        format: str | ImageType | None = ImageType.tif,
         tile_params: TileParams | None = None,
         pgstac_params: PgSTACParams | None = None,
     ) -> bytes:
@@ -195,7 +205,7 @@ class AsyncSearchAPI(RasterEndpointsMixin):
         *,
         tile_params: TileParams | None = None,
         pgstac_params: PgSTACParams | None = None,
-    ) -> dict:
+    ) -> StatisticsCollection:
         return await self._statistics(
             self._prefix(search_id),
             feature,
@@ -258,6 +268,12 @@ class AsyncSearchAPI(RasterEndpointsMixin):
             lat,
             pgstac_params=pgstac_params,
         )
+
+    async def available_tiles(self, search_id: str) -> TileSetList:
+        return await self._available_tiles(self._prefix(search_id))
+
+    async def tile_matrix_info(self, search_id: str, tms: str) -> TileSet:
+        return await self._tile_matrix_info(self._prefix(search_id), tms)
 
     def map_viewer_url(self, search_id: str, tms: str) -> str:
         return self._map_viewer_url(self._prefix(search_id), tms)

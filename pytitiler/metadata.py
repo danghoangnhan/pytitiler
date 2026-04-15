@@ -7,6 +7,7 @@ from pytitiler.models import (
     AlgorithmMetadata,
     AlgorithmRef,
     ColorMapRef,
+    TileMatrixSetDetail,
     TileMatrixSetRef,
 )
 
@@ -51,6 +52,6 @@ class AsyncTilingSchemeAPI(BaseAPI):
             TileMatrixSetRef.model_validate(t) for t in data.get("tileMatrixSets", [])
         ]
 
-    async def get(self, tms_id: str) -> dict:
+    async def get(self, tms_id: str) -> TileMatrixSetDetail:
         resp = await self._get(f"/tileMatrixSets/{tms_id}")
-        return resp.json()
+        return TileMatrixSetDetail.model_validate(resp.json())
