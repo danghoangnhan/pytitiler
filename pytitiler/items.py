@@ -4,12 +4,18 @@ from __future__ import annotations
 
 from pytitiler._base import RasterEndpointsMixin
 from pytitiler.models import (
+    BandStatistics,
     BboxParams,
     DatasetInfo,
     ImageType,
+    InfoGeoJSON,
     PointResponse,
+    RenderItemList,
+    RenderItemWithLinks,
     TileJSON,
     TileParams,
+    TileSet,
+    TileSetList,
 )
 
 
@@ -31,7 +37,8 @@ class AsyncItemAPI(RasterEndpointsMixin):
         x: int,
         y: int,
         *,
-        format: str | ImageType = ImageType.tif,
+        scale: int | None = None,
+        format: str | ImageType | None = ImageType.tif,
         tile_params: TileParams | None = None,
     ) -> bytes:
         return await self._tile(
@@ -40,6 +47,7 @@ class AsyncItemAPI(RasterEndpointsMixin):
             z,
             x,
             y,
+            scale=scale,
             format=format,
             tile_params=tile_params,
         )
@@ -115,7 +123,7 @@ class AsyncItemAPI(RasterEndpointsMixin):
         *,
         width: int | None = None,
         height: int | None = None,
-        format: str | ImageType = ImageType.tif,
+        format: str | ImageType | None = ImageType.tif,
         tile_params: TileParams | None = None,
     ) -> bytes:
         return await self._feature_image(
@@ -134,18 +142,15 @@ class AsyncItemAPI(RasterEndpointsMixin):
         feature: dict | None = None,
         *,
         tile_params: TileParams | None = None,
-    ) -> dict:
+    ) -> dict[str, BandStatistics]:
         prefix = self._prefix(collection_id, item_id)
-        if feature is not None:
-            return await self._statistics(
-                prefix,
-                feature,
-                tile_params=tile_params,
-            )
-        # GET statistics (no feature body)
         params = self._merge_params(tile_params)
-        resp = await self._get(f"{prefix}/statistics", params=params)
-        return resp.json()
+        if feature is not None:
+            resp = await self._post(f"{prefix}/statistics", json=feature, params=params)
+        else:
+            resp = await self._get(f"{prefix}/statistics", params=params)
+        data = resp.json()
+        return {k: BandStatistics.model_validate(v) for k, v in data.items()}
 
     async def info(self, collection_id: str, item_id: str) -> DatasetInfo:
         result = await self._info(self._prefix(collection_id, item_id))
@@ -153,10 +158,10 @@ class AsyncItemAPI(RasterEndpointsMixin):
             raise TypeError(f"Expected DatasetInfo, got {type(result).__name__}")
         return result
 
-    async def info_geojson(self, collection_id: str, item_id: str) -> dict:
+    async def info_geojson(self, collection_id: str, item_id: str) -> InfoGeoJSON:
         prefix = self._prefix(collection_id, item_id)
         resp = await self._get(f"{prefix}/info.geojson")
-        return resp.json()
+        return InfoGeoJSON.model_validate(resp.json())
 
     async def wmts(self, collection_id: str, item_id: str) -> str:
         return await self._wmts(self._prefix(collection_id, item_id))
@@ -191,20 +196,36 @@ class AsyncItemAPI(RasterEndpointsMixin):
         resp = await self._get(f"{prefix}/assets")
         return resp.json()
 
-    async def asset_statistics(self, collection_id: str, item_id: str) -> dict:
+    async def asset_statistics(
+        self, collection_id: str, item_id: str
+    ) -> dict[str, dict[str, BandStatistics]]:
         prefix = self._prefix(collection_id, item_id)
         resp = await self._get(f"{prefix}/asset_statistics")
-        return resp.json()
+        data = resp.json()
+        return {
+            asset: {band: BandStatistics.model_validate(v) for band, v in bands.items()}
+            for asset, bands in data.items()
+        }
 
-    async def renders(self, collection_id: str, item_id: str) -> dict:
+    async def renders(self, collection_id: str, item_id: str) -> RenderItemList:
         prefix = self._prefix(collection_id, item_id)
         resp = await self._get(f"{prefix}/renders")
-        return resp.json()
+        return RenderItemList.model_validate(resp.json())
 
-    async def render(self, collection_id: str, item_id: str, render_id: str) -> dict:
+    async def render(
+        self, collection_id: str, item_id: str, render_id: str
+    ) -> RenderItemWithLinks:
         prefix = self._prefix(collection_id, item_id)
         resp = await self._get(f"{prefix}/renders/{render_id}")
-        return resp.json()
+        return RenderItemWithLinks.model_validate(resp.json())
+
+    async def available_tiles(self, collection_id: str, item_id: str) -> TileSetList:
+        return await self._available_tiles(self._prefix(collection_id, item_id))
+
+    async def tile_matrix_info(
+        self, collection_id: str, item_id: str, tms: str
+    ) -> TileSet:
+        return await self._tile_matrix_info(self._prefix(collection_id, item_id), tms)
 
     def map_viewer_url(self, collection_id: str, item_id: str, tms: str) -> str:
         return self._map_viewer_url(self._prefix(collection_id, item_id), tms)

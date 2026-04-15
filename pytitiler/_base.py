@@ -13,8 +13,11 @@ from pytitiler.models import (
     PgSTACParams,
     PointResponse,
     SearchInfo,
+    StatisticsCollection,
     TileJSON,
     TileParams,
+    TileSet,
+    TileSetList,
 )
 
 
@@ -73,11 +76,14 @@ class RasterEndpointsMixin(BaseAPI):
         x: int,
         y: int,
         *,
-        format: str | ImageType = ImageType.tif,
+        scale: int | None = None,
+        format: str | ImageType | None = ImageType.tif,
         tile_params: TileParams | None = None,
         pgstac_params: PgSTACParams | None = None,
     ) -> bytes:
-        path = f"{prefix}/tiles/{tms}/{z}/{x}/{y}.{format}"
+        scale_part = f"@{scale}x" if scale is not None else ""
+        fmt_part = f".{format}" if format is not None else ""
+        path = f"{prefix}/tiles/{tms}/{z}/{x}/{y}{scale_part}{fmt_part}"
         params = self._merge_params(tile_params, pgstac_params)
         resp = await self._get(path, params=params, accept="image/*")
         return resp.content
@@ -156,14 +162,15 @@ class RasterEndpointsMixin(BaseAPI):
         *,
         width: int | None = None,
         height: int | None = None,
-        format: str | ImageType = ImageType.tif,
+        format: str | ImageType | None = ImageType.tif,
         tile_params: TileParams | None = None,
         pgstac_params: PgSTACParams | None = None,
     ) -> bytes:
+        fmt_part = f".{format}" if format is not None else ""
         if width is not None and height is not None:
-            path = f"{prefix}/feature/{width}x{height}.{format}"
+            path = f"{prefix}/feature/{width}x{height}{fmt_part}"
         else:
-            path = f"{prefix}/feature.{format}"
+            path = f"{prefix}/feature{fmt_part}"
         params = self._merge_params(tile_params, pgstac_params)
         resp = await self._post(path, json=feature, params=params)
         return resp.content
@@ -175,11 +182,11 @@ class RasterEndpointsMixin(BaseAPI):
         *,
         tile_params: TileParams | None = None,
         pgstac_params: PgSTACParams | None = None,
-    ) -> dict:
+    ) -> StatisticsCollection:
         path = f"{prefix}/statistics"
         params = self._merge_params(tile_params, pgstac_params)
         resp = await self._post(path, json=feature, params=params)
-        return resp.json()
+        return StatisticsCollection.model_validate(resp.json())
 
     async def _info(self, prefix: str) -> DatasetInfo | SearchInfo:
         resp = await self._get(f"{prefix}/info")
@@ -235,6 +242,14 @@ class RasterEndpointsMixin(BaseAPI):
         params = self._merge_params(pgstac_params)
         resp = await self._get(path, params=params)
         return resp.json()
+
+    async def _available_tiles(self, prefix: str) -> TileSetList:
+        resp = await self._get(f"{prefix}/tiles")
+        return TileSetList.model_validate(resp.json())
+
+    async def _tile_matrix_info(self, prefix: str, tms: str) -> TileSet:
+        resp = await self._get(f"{prefix}/tiles/{tms}")
+        return TileSet.model_validate(resp.json())
 
     def _map_viewer_url(self, prefix: str, tms: str) -> str:
         return f"{self._http.base_url}{prefix}/{tms}/map.html"

@@ -9,8 +9,11 @@ from pytitiler.models import (
     ImageType,
     MosaicPointResponse,
     PgSTACParams,
+    StatisticsCollection,
     TileJSON,
     TileParams,
+    TileSet,
+    TileSetList,
 )
 
 
@@ -31,7 +34,8 @@ class AsyncCollectionAPI(RasterEndpointsMixin):
         x: int,
         y: int,
         *,
-        format: str | ImageType = ImageType.tif,
+        scale: int | None = None,
+        format: str | ImageType | None = ImageType.tif,
         tile_params: TileParams | None = None,
         pgstac_params: PgSTACParams | None = None,
     ) -> bytes:
@@ -41,6 +45,7 @@ class AsyncCollectionAPI(RasterEndpointsMixin):
             z,
             x,
             y,
+            scale=scale,
             format=format,
             tile_params=tile_params,
             pgstac_params=pgstac_params,
@@ -120,7 +125,7 @@ class AsyncCollectionAPI(RasterEndpointsMixin):
         *,
         width: int | None = None,
         height: int | None = None,
-        format: str | ImageType = ImageType.tif,
+        format: str | ImageType | None = ImageType.tif,
         tile_params: TileParams | None = None,
         pgstac_params: PgSTACParams | None = None,
     ) -> bytes:
@@ -141,7 +146,7 @@ class AsyncCollectionAPI(RasterEndpointsMixin):
         *,
         tile_params: TileParams | None = None,
         pgstac_params: PgSTACParams | None = None,
-    ) -> dict:
+    ) -> StatisticsCollection:
         return await self._statistics(
             self._prefix(collection_id),
             feature,
@@ -204,6 +209,12 @@ class AsyncCollectionAPI(RasterEndpointsMixin):
             lat,
             pgstac_params=pgstac_params,
         )
+
+    async def available_tiles(self, collection_id: str) -> TileSetList:
+        return await self._available_tiles(self._prefix(collection_id))
+
+    async def tile_matrix_info(self, collection_id: str, tms: str) -> TileSet:
+        return await self._tile_matrix_info(self._prefix(collection_id), tms)
 
     def map_viewer_url(self, collection_id: str, tms: str) -> str:
         return self._map_viewer_url(self._prefix(collection_id), tms)

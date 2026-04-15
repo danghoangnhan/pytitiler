@@ -321,3 +321,105 @@ class TileMatrixSetRef(BaseModel):
     id: str
     title: str | None = None
     links: list[Link] | None = None
+
+
+# ──────────────────────────────────────────────
+# OGC / root response models
+# ──────────────────────────────────────────────
+
+
+class Landing(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    links: list[Link]
+
+
+class Conformance(BaseModel):
+    conformsTo: list[str]
+
+
+# ──────────────────────────────────────────────
+# OGC Tiles response models
+# ──────────────────────────────────────────────
+
+
+class TileSet(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    title: str | None = None
+    description: str | None = None
+    dataType: str
+    crs: str
+    links: list[Link]
+    tileMatrixSetURI: str | None = None
+    attribution: str | None = None
+    keywords: list[str] | None = None
+    version: str | None = None
+    mediaTypes: list[str] | None = None
+
+
+class TileSetList(BaseModel):
+    tilesets: list[TileSet]
+
+
+class TileMatrixSetDetail(BaseModel):
+    """Full tile matrix set definition (GET /tileMatrixSets/{id})."""
+
+    model_config = ConfigDict(extra="allow")
+
+    title: str | None = None
+    description: str | None = None
+    id: str | None = None
+    uri: str | None = None
+    crs: str
+    orderedAxes: list[str] | None = None
+    wellKnownScaleSet: str | None = None
+    tileMatrices: list[dict]
+
+
+# ──────────────────────────────────────────────
+# Render response models
+# ──────────────────────────────────────────────
+
+
+class RenderItemWithLinks(BaseModel):
+    params: RenderItem
+    links: list[Link]
+
+
+class RenderItemList(BaseModel):
+    renders: dict[str, RenderItemWithLinks]
+    links: list[Link]
+
+
+# ──────────────────────────────────────────────
+# GeoJSON info response model
+# ──────────────────────────────────────────────
+
+
+class InfoGeoJSON(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    type: str = "Feature"
+    bbox: list[float] | None = None
+    geometry: dict | None = None
+    properties: dict
+    id: str | None = None
+
+
+# ──────────────────────────────────────────────
+# Statistics response models
+# ──────────────────────────────────────────────
+
+
+class StatisticsFeature(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    type: str = "Feature"
+    geometry: dict | None = None
+    properties: dict
+
+
+class StatisticsCollection(BaseModel):
+    type: str = "FeatureCollection"
+    features: list[StatisticsFeature]
